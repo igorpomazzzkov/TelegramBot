@@ -39,8 +39,6 @@ public class CityService {
 
     public City updateCity(City city) {
         City cityFromDB = cityRepository.findById(city.getId()).get();
-        System.out.println(city);
-        System.out.println(cityFromDB);
         BeanUtils.copyProperties(city, cityFromDB, "id");
         return cityRepository.save(cityFromDB);
     }

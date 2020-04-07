@@ -54,10 +54,9 @@ public class Bot extends TelegramLongPollingBot {
     private SendMessage setMessage(String message) {
         SendMessageBuilder sendMessageBuilder = new SendMessageBuilder(this.chatId);
         if (!message.substring(0, 1).equals("/")) {
-            message = this.getOrderMessage(message);
             switch (this.previousMessage){
                 case "/findcity": {
-                    City city = cityService.findByCityName(message);
+                    City city = cityService.findByCityName(this.getOrderMessage(message));
                     if (city == null) {
                         sendMessageBuilder.sendStartMessage(MessageResponse.NO_DATABASE_CITY);
                     } else {
@@ -69,11 +68,11 @@ public class Bot extends TelegramLongPollingBot {
                 case "/editCity":
                 case "/addcity":{
                     if(this.city.getName() == null){
-                        City city = cityService.findByCityName(message);
+                        City city = cityService.findByCityName(this.getOrderMessage(message));
                         if(city != null) {
                             sendMessageBuilder.sendDefaultMessage(MessageResponse.DATABASE_CITY + "\n" + MessageResponse.GET_NAME_CITY_MESSAGE);
                         } else {
-                            this.city.setName(message);
+                            this.city.setName(this.getOrderMessage(message));
                             sendMessageBuilder.sendDefaultMessage(MessageResponse.GET_DESCRIPTION_CITY_MESSAGE);
                         }
                     } else {
@@ -83,19 +82,22 @@ public class Bot extends TelegramLongPollingBot {
                             sendMessageBuilder.sendStartMessage(MessageResponse.EDIT_MESSAGE);
                         }
                         if(this.previousMessage.equals("/addcity")){
-                            this.cityService.updateCity(city);
+                            this.cityService.saveCity(city);
                             sendMessageBuilder.sendStartMessage(MessageResponse.ADD_MESSAGE);
                         }
+                        this.previousMessage = "/findcity";
+                        this.city = new City();
                     }
                     break;
                 }
                 case "/removecity": {
-                    City city = cityService.findByCityName(message);
+                    City city = cityService.findByCityName(this.getOrderMessage(message));
                     if (city == null) {
                         sendMessageBuilder.sendStartMessage(MessageResponse.NO_DATABASE_CITY);
                     } else {
                         cityService.deleteCity(city);
                         sendMessageBuilder.sendStartMessage(MessageResponse.REMOVE_MESSAGE);
+                        this.previousMessage = "/findcity";
                     }
                     break;
                 }
@@ -104,37 +106,39 @@ public class Bot extends TelegramLongPollingBot {
             switch (message) {
                 case "/start": {
                     sendMessageBuilder.sendStartMessage(MessageResponse.START_MESSAGE);
+                    this.previousMessage = "/findcity";
                 }
                 case "/getallcities": {
                     List<City> cityList = cityService.findAllCities();
-                    System.out.println(cityList.size());
                     if (cityList.size() != 0) {
                         sendMessageBuilder.sendAllCitiesMessage(cityService.findAllCities());
                     } else {
                         sendMessageBuilder.sendStartMessage("База данных городов пуста! \n" + MessageResponse.DEFAULT_MESSAGE);
                     }
+                    this.previousMessage = "/findcity";
                     break;
                 }
                 case "/findcity":
                 case "/addcity":
                 case "/removecity": {
                     sendMessageBuilder.sendDefaultMessage(MessageResponse.GET_NAME_CITY_MESSAGE);
+                    this.previousMessage = message;
                     break;
                 }
-
                 case "/deleteCty": {
                     cityService.deleteCity(this.city);
                     sendMessageBuilder.sendStartMessage(MessageResponse.REMOVE_MESSAGE);
+                    this.previousMessage = "/findcity";
                     break;
                 }
                 case "/editCity": {
                     sendMessageBuilder.sendDefaultMessage(String.format(MessageResponse.EDIT_NAME_CITY, this.city.getName()));
+                    this.previousMessage = message;
                     break;
                 }
             }
             this.city.setName(null);
             this.city.setDescription(null);
-            this.previousMessage = message;
         }
         return sendMessageBuilder.getMessage();
     }
